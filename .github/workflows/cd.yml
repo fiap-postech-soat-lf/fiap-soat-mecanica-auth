@@ -26,7 +26,14 @@ env:
 
 jobs:
   ambiente:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # O filtro "branches: [main]" do workflow_run olha so o nome da branch: um PR de fork com
+    # uma branch "main" tambem dispararia o CD com os secrets. So o CI de push neste repositorio
+    # (merge na main) faz deploy.
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.event == 'push' &&
+           github.event.workflow_run.head_repository.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -90,7 +97,7 @@ jobs:
         run: ./mvnw -B -DskipTests package
 
       - name: Configurar Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: "1.15.8"
           terraform_wrapper: false
