@@ -1,0 +1,139 @@
+# CD do -auth: Lambda Authorizer + API Gateway. Proprio, e nao o servico-cd.yml, porque o
+# reusable e especifico de Kubernetes (ADR-F4-11 cobre os 4 servicos iguais).
+# Porteiro: sem o NLB ou sem a chave publica do Identity no SSM, termina verde sem deploy.
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-auth
+  cancel-in-progress: false
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+  AWS_REGION: us-east-1
+  AWS_DEFAULT_REGION: us-east-1
+
+jobs:
+  ambiente:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ativo: ${{ steps.ssm.outputs.ativo }}
+    steps:
+      - name: Validar credenciais do Academy
+        run: |
+          if [[ -z "$AWS_ACCESS_KEY_ID" || -z "$AWS_SECRET_ACCESS_KEY" || -z "$AWS_SESSION_TOKEN" ]]; then
+            echo "::error::Secrets AWS_* ausentes. Rode scripts/atualizar-credenciais.sh no -k8s."
+            exit 1
+          fi
+          if ! erro=$(aws sts get-caller-identity --query Account --output text 2>&1 >/dev/null); then
+            echo "::error::Credenciais AWS invalidas ou expiradas: rode scripts/atualizar-credenciais.sh no -k8s. Detalhe: $erro"
+            exit 1
+          fi
+
+      - name: Ler o NLB e a chave publica no SSM
+        id: ssm
+        run: |
+          erro_ssm="$RUNNER_TEMP/ssm.err"
+          for nome in /mecanica/k8s/nlb-dns /mecanica/identity/jwt-public-key; do
+            if aws ssm get-parameter --name "$nome" --query Parameter.Name --output text \
+                > /dev/null 2> "$erro_ssm"; then
+              echo "Encontrado: $nome"
+            elif grep -q ParameterNotFound "$erro_ssm"; then
+              echo "ativo=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::Borda pulada: EKS desligado ou Identity sem infra ($nome ausente no SSM)."
+              echo "### Borda pulada: EKS desligado ou Identity sem infra" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            elif grep -Eq 'ExpiredToken|InvalidClientTokenId|UnrecognizedClient' "$erro_ssm"; then
+              echo "::error::Credenciais AWS expiradas: rode scripts/atualizar-credenciais.sh no -k8s. Detalhe: $(cat "$erro_ssm")"
+              exit 1
+            else
+              echo "::error::Falha ao ler o SSM $nome: $(cat "$erro_ssm")"
+              exit 1
+            fi
+          done
+          echo "ativo=true" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: ambiente
+    if: ${{ needs.ambiente.outputs.ativo == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - name: Obter o commit testado
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Empacotar a Lambda
+        run: ./mvnw -B -DskipTests package
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.15.8"
+          terraform_wrapper: false
+
+      - name: terraform init e apply
+        run: |
+          account_id=$(aws sts get-caller-identity --query Account --output text)
+          terraform -chdir=infra init -input=false \
+            -backend-config="bucket=mecanica-tfstate-${account_id}" \
+            -backend-config="key=fiap-soat-mecanica-auth/terraform.tfstate" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="use_lockfile=true"
+          terraform -chdir=infra apply -input=false -auto-approve
+          echo "API_URL=$(terraform -chdir=infra output -raw api_url)" >> "$GITHUB_ENV"
+
+      # Sem token, o API Gateway responde 401 sem chamar a Lambda: prova que a rota
+      # protegida esta com o authorizer. O auto_deploy do stage leva alguns segundos.
+      - name: Smoke do authorizer
+        id: smoke
+        run: |
+          status=""
+          for _ in $(seq 1 12); do
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 10 \
+              "${API_URL}/health-echo" || true)
+            if [[ "$status" == "401" ]]; then
+              echo "GET /health-echo sem token -> 401"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::GET ${API_URL}/health-echo sem token devolveu ${status:-nada}, esperado 401."
+          exit 1
+
+      - name: Resumo
+        if: ${{ always() }}
+        env:
+          SMOKE: ${{ steps.smoke.outcome }}
+        run: |
+          {
+            echo "### Deploy da borda"
+            echo ""
+            echo "| Item | Valor |"
+            echo "|---|---|"
+            echo "| API | ${API_URL:-nao criada} |"
+            echo "| Smoke (sem token -> 401) | ${SMOKE:-nao executado} |"
+          } >> "$GITHUB_STEP_SUMMARY"
