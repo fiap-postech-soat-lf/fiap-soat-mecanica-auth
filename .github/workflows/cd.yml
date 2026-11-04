@@ -75,7 +75,11 @@ jobs:
 
   deploy:
     needs: ambiente
-    if: ${{ needs.ambiente.outputs.ativo == 'true' }}
+    # Repete a origem do CI no job que faz o checkout (defesa em profundidade).
+    if: >-
+      ${{ needs.ambiente.outputs.ativo == 'true' &&
+          (github.event_name == 'workflow_dispatch' ||
+           github.event.workflow_run.head_repository.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
