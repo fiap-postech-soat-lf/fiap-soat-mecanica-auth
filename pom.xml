@@ -42,6 +42,11 @@
             <artifactId>aws-lambda-java-events</artifactId>
             <version>3.16.0</version>
         </dependency>
+        <!-- Logs estruturados (StructuredLogger). Versao no dependencyManagement; ja vinha pelo jjwt-jackson. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
