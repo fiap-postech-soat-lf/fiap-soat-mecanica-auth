@@ -3,7 +3,7 @@
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=fiap-postech-soat-lf_fiap-soat-mecanica-auth&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=fiap-postech-soat-lf_fiap-soat-mecanica-auth)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=fiap-postech-soat-lf_fiap-soat-mecanica-auth&metric=coverage)](https://sonarcloud.io/component_measures?id=fiap-postech-soat-lf_fiap-soat-mecanica-auth&metric=coverage)
 
-**Lambda Authorizer + API Gateway** da **Fase 4** da Oficina Mecânica do Braia (Tech Challenge FIAP SOAT). O API Gateway (HTTP API) é a porta de entrada pública. O authorizer valida o JWT RS256 emitido pelo serviço Identity antes de encaminhar a requisição ao NLB do EKS.
+**Lambda Authorizer + API Gateway** da **Fase 4** da Oficina Mecânica SOAT15 - LF (Tech Challenge FIAP SOAT). O API Gateway (HTTP API) é a porta de entrada pública. O authorizer valida o JWT RS256 emitido pelo serviço Identity antes de encaminhar a requisição ao NLB do EKS.
 
 Veja também o [diagrama geral da arquitetura](https://github.com/fiap-postech-soat-lf/fiap-soat-mecanica-k8s/blob/main/docs/arquitetura-fase4/diagrama/arquitetura-aws-fase4.png) e as decisões [ADR-F4-06 (borda)](https://github.com/fiap-postech-soat-lf/fiap-soat-mecanica-k8s/blob/main/docs/arquitetura-fase4/adr/ADR-F4-06-borda-api-gateway-authorizer-nlb.md) e [ADR-F4-07 (JWT RS256)](https://github.com/fiap-postech-soat-lf/fiap-soat-mecanica-k8s/blob/main/docs/arquitetura-fase4/adr/ADR-F4-07-jwt-rs256.md).
 
