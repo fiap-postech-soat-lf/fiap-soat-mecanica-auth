@@ -8,7 +8,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Log em JSON numa linha por evento (copiado do -auth do grupo, api/StructuredLogger.java). */
+/** Log em JSON numa linha por evento. */
 public final class StructuredLogger {
     private final ObjectMapper objectMapper;
     private final PrintStream saida;
