@@ -5,7 +5,7 @@
 
 **Lambda Authorizer + API Gateway** da **Fase 4** da Oficina Mecânica SOAT15 - LF (Tech Challenge FIAP SOAT). O API Gateway (HTTP API) é a porta de entrada pública. O authorizer valida o JWT RS256 emitido pelo serviço Identity antes de encaminhar a requisição ao NLB do EKS.
 
-Veja também o [diagrama geral da arquitetura](https://github.com/fiap-postech-soat-lf/fiap-soat-mecanica-k8s/blob/main/docs/arquitetura-fase4/diagrama/arquitetura-aws-fase4.png) e as decisões [ADR-F4-06 (borda)](https://github.com/fiap-postech-soat-lf/fiap-soat-mecanica-k8s/blob/main/docs/arquitetura-fase4/adr/ADR-F4-06-borda-api-gateway-authorizer-nlb.md) e [ADR-F4-07 (JWT RS256)](https://github.com/fiap-postech-soat-lf/fiap-soat-mecanica-k8s/blob/main/docs/arquitetura-fase4/adr/ADR-F4-07-jwt-rs256.md).
+Veja também o [diagrama geral da arquitetura](https://github.com/fiap-postech-soat-lf/fiap-soat-mecanica-k8s/blob/main/docs/arquitetura-fase4/diagrama/arquitetura-aws-fase4.png) e as decisões [ADR-F4-06 (borda)](https://github.com/fiap-postech-soat-lf/fiap-soat-mecanica-k8s/blob/main/docs/arquitetura-fase4/adr/ADR-F4-06-borda-api-gateway-authorizer-nlb.md) e [ADR-F4-07 (JWT RS256)](https://github.com/fiap-postech-soat-lf/fiap-soat-mecanica-k8s/blob/main/docs/arquitetura-fase4/adr/ADR-F4-07-jwt-rs256.md). Vídeo da entrega: [assistir no Vimeo](https://vimeo.com/1246945589).
 
 ## Estrutura
 
@@ -62,7 +62,3 @@ Requisitos: Java 21 e Maven Wrapper (incluído). Sem Spring: a Lambda usa só `a
 ## CI
 
 O `ci.yml` chama o reusable `servico-ci.yml@v1` do [`fiap-soat-mecanica-k8s`](https://github.com/fiap-postech-soat-lf/fiap-soat-mecanica-k8s) (check `ci / build`): testes, cobertura e análise no SonarCloud (`fiap-postech-soat-lf_fiap-soat-mecanica-auth`) com espera do Quality Gate.
-
-## Origem
-
-Adaptado do repositório `-auth` da Fase 3 do grupo (usado só para consulta).
